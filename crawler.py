@@ -79,18 +79,13 @@ def latinizeString(s):
     return s
 
 def getToken():
-    salt = b'anisucks'
+    salt = ''.join(map(bin, bytearray(str(os.environ.get('SALT')))))
     timestamp = ''.join(map(bin,bytearray(str(time.time()))))
     dk = hashlib.pbkdf2_hmac('sha256', timestamp, salt, 100000)
+    return str(binascii.hexlify(dk))
 
-sys.exit()
-
-html_template = open('../email_template.html', 'r').read()
-
-apikey=os.environ.get('SENDGRID_API_KEY')
-print apikey
+html_template = open('./email_template.html', 'r').read()
 sg = sendgrid.SendGridAPIClient(apikey=os.environ.get('SENDGRID_API_KEY'))
-sys.exit()
 
 host = 'localhost'
 port = 27017
@@ -99,6 +94,27 @@ db = client.notifique
 collection = db['n20161'] # Application data
 collectionU = db['u20161'] # List of people who unsubscribed
 collectionT = db['t20161'] # List of email tokens
+
+token = getToken()
+firstName = 'Doğukan Yiğit'
+lastName = 'Polat'
+email = 'yigit.polat@ug.bilkent.edu.tr'
+res = collectionU.find({'email': email})
+if res.count() == 0:
+    oldStatus = getStatusString('E')
+    newStatus = getStatusString('R')
+    unsub = {'email': email, 'token': token}
+    # @TODO Insert token with email address to db.
+    collectionT.insert_one({'email': email, 'token': token})
+    url = 'http://cgds.me:5000/notifique?token='
+    course = 'CS299'
+
+    # yigit.polat@ug.bilkent.edu.tr
+    # cagdas.oztekin@ug.bilkent.edu.tr
+    html = replaceHtmlParams(html_template, course, firstName, lastName, oldStatus, newStatus, url + token)
+    sendMail(sg, email, 'Your {0} report status changed!'.format(course), 'Greetings {0} {1},\nYour {2} report status changed from {3} to {4}'.format(firstName, lastName, course, oldStatus, newStatus), html)
+
+sys.exit()
 
 url2 = 'http://www.cs.bilkent.edu.tr/~sekreter/SummerTraining/2016G/CS299.htm'
 url3 = 'http://www.cs.bilkent.edu.tr/~sekreter/SummerTraining/2016G/CS399.htm'
@@ -146,9 +162,11 @@ while True:
         newStatus = person['status']
 
         if newStatus != oldStatus:
-            # @TODO check if this email has unsubscribed
-            emails.append({'email': old['email'], 'course': old['courseInt'], 'oldStatus': oldStatus,
+            res = collectionU.find({'email': old['email']})
+            if res.count() == 0:
+                emails.append({'email': old['email'], 'course': old['courseInt'], 'oldStatus': oldStatus,
             'newStatus': newStatus, 'firstName': person['firstName'], 'lastName': person['lastName']})
+
         dbobj = collection.update({'firstNameLatin': person['firstNameLatin']}, {'$set': person})
 
     while len(emails) > 0:
@@ -158,15 +176,16 @@ while True:
         firstName = cur['firstName']
         lastName = cur['lastName']
         email = cur['email']
-        oldStatus = cur['oldStatus']
-        newStatus = cur['newStatus']
+        oldStatus = getStatusString(cur['oldStatus'])
+        newStatus = getStatusString(cur['newStatus'])
 
-        unsub = {'email': }
-        # @TODO Insert token with email address to db.
+        unsub = {'email': email, 'token': token}
+        collectionT.insert_one({'email': email, 'token': token})
         url = 'http://cgds.me:5000/notifique?token='
         course = 'CS299'
         if cur['course'] == 1:
             course = 'CS399'
 
-        html = replaceHtmlParams(html_template, course, firstName, lastName, getStatusString(oldStatus), getStatusString(newStatus), url + token)
-        sendMail(sg, cur['email'], 'Your {0} report status changed!'.format(course), 'Hello {0} {1},\nYour {2} report status changed from {3} to {4}'.format(firstName, lastName, course, oldStatus, newStatus), html)
+        html = replaceHtmlParams(html_template, course, firstName, lastName, oldStatus, newStatus, url + token)
+        sendMail(sg, email, 'Your {0} report status changed!'.format(course), 'Hello {0} {1},\nYour {2} report status changed from {3} to {4}'.format(firstName, lastName, course, oldStatus, newStatus), html)
+        print "Sent mail to {0} {1} at {2}. Status changed from {3} to {4}".format(firstName, lastName, email, cur['oldStatus'], cur['newStatus'])
