@@ -81,8 +81,8 @@ def latinizeString(s):
 def getToken():
     salt = ''.join(map(bin, bytearray(str(os.environ.get('SALT')))))
     timestamp = ''.join(map(bin,bytearray(str(time.time()))))
-    dk = hashlib.pbkdf2_hmac('sha256', timestamp, salt, 100000)
-    return str(binascii.hexlify(dk))
+    dk = hashlib.sha224(timestamp + salt).hexdigest()
+    return dk
 
 html_template = open('./email_template.html', 'r').read()
 sg = sendgrid.SendGridAPIClient(apikey=os.environ.get('SENDGRID_API_KEY'))
@@ -127,8 +127,6 @@ while True:
                     "lastNameLatin": latinizeString(last_name), "lastName": last_name,
                     "professor": professor, "status": status}
                 obj['courseInt'] = count
-                if first_name == 'Banu':
-                    print obj
                 people.append(obj)
             except:
                 pass
