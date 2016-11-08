@@ -91,7 +91,8 @@ host = 'localhost'
 port = 27017
 client = MongoClient(host, port)
 db = client.notifique
-collection = db['n20161'] # Application data
+collection299 = db['n20161cs299'] # Application data
+collection399 = db['n20161cs399'] # Application data
 collectionU = db['u20161'] # List of people who unsubscribed
 collectionT = db['t20161'] # List of email tokens
 
@@ -104,7 +105,9 @@ while True:
     pages.append(urllib2.urlopen(url2).read())
     pages.append(urllib2.urlopen(url3).read())
     people = []
-    emails = []
+    emails = [{'email': 'cagdas.oztekin@ug.bilkent.edu.tr', 'course': 0, 'oldStatus': 'E',
+'newStatus': 'S', 'firstName': 'Cagdas', 'lastName': 'Oztekin'}]
+    count = 0
 
     while len(pages) > 0:
         page = pages.pop()
@@ -120,43 +123,42 @@ while True:
                 last_name = str(tds[2].text.encode('utf-8')).rstrip().replace('\n', '')
                 professor = str(tds[3].text.encode('utf-8'))
                 status = str(tds[4].text.encode('utf-8'))
-                count = num
                 obj = {"firstName": first_name, "firstNameLatin": latinizeString(first_name),
                     "lastNameLatin": latinizeString(last_name), "lastName": last_name,
                     "professor": professor, "status": status}
-                if count == 0:
-                    obj['courseInt'] = 0
-                else:
-                    obj['courseInt'] = 1
-		people.append(obj)
-
+                obj['courseInt'] = count
+                if first_name == 'Banu':
+                    print obj
+                people.append(obj)
             except:
-                # print i, "Fail", tds[0].text.encode('utf-8')
                 pass
+        count += 1
 
     for person in people:
-        oldx = collection.find({'firstNameLatin': person['firstNameLatin'], 'lastNameLatin': person['lastNameLatin'], 'courseInt': person['courseInt']})
-	print oldx.count()
-	try:
-            if oldx.count() > 1:
-    	        for i in xrange(oldx.count()):
-   		    print oldx[i]
+        cur = person['courseInt']
+        oldx = {}
+        if cur == 0:
+            oldx = collection299.find_one({'firstNameLatin': person['firstNameLatin'], 'lastNameLatin': person['lastNameLatin'], 'courseInt': person['courseInt']})
+        else:
+            oldx = collection399.find_one({'firstNameLatin': person['firstNameLatin'], 'lastNameLatin': person['lastNameLatin'], 'courseInt': person['courseInt']})
+
+        try:
             old = oldx[0]
             oldStatus = old['status']
             newStatus = person['status']
 
-            if newStatus != oldStatus:
+            if newStatus != oldStatus and old['courseInt'] == person['courseInt']:
                 res = collectionU.find({'email': old['email']})
                 if res.count() == 0:
                     emails.append({'email': old['email'], 'course': old['courseInt'], 'oldStatus': oldStatus,
                 'newStatus': newStatus, 'firstName': person['firstName'], 'lastName': person['lastName']})
+            if cur == 0:
+                dbobj = collection299.update({'firstNameLatin': person['firstNameLatin'], 'lastNameLatin': person['lastNameLatin']}, {'$set': person})
+            else:
+                dbobj = collection399.update({'firstNameLatin': person['firstNameLatin'], 'lastNameLatin': person['lastNameLatin']}, {'$set': person})
+        except:
+            continue
 
-            dbobj = collection.update({'firstNameLatin': person['firstNameLatin']}, {'$set': person})
-	except:
-	    continue
-
-    print len(emails)
-    print 'length'
     while len(emails) > 0:
         token = getToken()
         cur = emails.pop()
@@ -177,4 +179,4 @@ while True:
         #html = replaceHtmlParams(html_template, course, firstName, lastName, oldStatus, newStatus, url + token)
         #sendMail(sg, email, 'Your {0} report status changed!'.format(course), 'Hello {0} {1},\nYour {2} report status changed from {3} to {4}'.format(firstName, lastName, course, oldStatus, newStatus), html)
         print "Sent mail to {0} {1} at {2}. Status changed from {3} to {4}".format(firstName, lastName, email, cur['oldStatus'], cur['newStatus'])
-    time.sleep(100)
+    # time.sleep(100)

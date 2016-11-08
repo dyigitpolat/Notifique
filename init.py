@@ -49,10 +49,13 @@ port = 27017
 
 client = MongoClient(host, port)
 db = client.notifique
-collection = db['n20161']
+collection299 = db['n20161cs299']
+collection399 = db['n20161cs399']
 # Delete previous records. This is to initialize the DB.
-collection.delete_many({})
-saveEmails('./students.txt', collection)
+collection299.delete_many({})
+collection399.delete_many({})
+saveEmails('./students.txt', collection299)
+saveEmails('./students.txt', collection399)
 
 
 url2 = 'http://www.cs.bilkent.edu.tr/~sekreter/SummerTraining/2016G/CS299.htm'
@@ -64,6 +67,8 @@ people = []
 # Two respective pages to read, for CS299 and CS399
 pages.append(urllib2.urlopen(url2).read())
 pages.append(urllib2.urlopen(url3).read())
+
+count = 0
 
 for page in pages:
     soup = BeautifulSoup(page, 'html.parser')
@@ -78,19 +83,18 @@ for page in pages:
             last_name = str(tds[2].text.encode('utf-8')).rstrip().replace('\n', '')
             professor = str(tds[3].text.encode('utf-8'))
             status = str(tds[4].text.encode('utf-8'))
-            count = num
             obj = {"firstName": first_name, "firstNameLatin": latinizeString(first_name),
                 "lastNameLatin": latinizeString(last_name), "lastName": last_name,
                 "professor": professor, "status": status}
-            if count == 0:
-                obj['courseInt'] = 0
-                people.append(obj)
-            else:
-                obj['courseInt'] = 1
-                people.append(obj)
+            obj['courseInt'] = count
+            people.append(obj)
         except:
             pass
-
+    count += 1
 
 for person in people:
-    collection.update({'firstNameLatin': person['firstNameLatin']}, {'$set': person})
+    cur = person['courseInt']
+    if cur == 0:
+        collection299.update({'firstNameLatin': person['firstNameLatin'], 'lastNameLatin': person['lastNameLatin']}, {'$set': person})
+    else:
+        collection399.update({'firstNameLatin': person['firstNameLatin'], 'lastNameLatin': person['lastNameLatin']}, {'$set': person})
