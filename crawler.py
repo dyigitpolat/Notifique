@@ -21,7 +21,7 @@ def replaceHtmlParams(template, course, firstName, lastName, oldStatus, newStatu
 
 def getStatusString(s):
     d = { 'S': 'Satisfactory', 'U': 'Unsatisfactory', 'E': 'Under Evaluation', 'R': 'Requires Revision', 'F': 'Form from company has not arrived', 'N': 'Report has not been submitted'}
-
+    s = str(s)
     tokens = map(str.strip, s.split('+'))
 
     res = ''
@@ -95,37 +95,15 @@ collection = db['n20161'] # Application data
 collectionU = db['u20161'] # List of people who unsubscribed
 collectionT = db['t20161'] # List of email tokens
 
-token = getToken()
-firstName = 'Doğukan Yiğit'
-lastName = 'Polat'
-email = 'yigit.polat@ug.bilkent.edu.tr'
-res = collectionU.find({'email': email})
-if res.count() == 0:
-    oldStatus = getStatusString('E')
-    newStatus = getStatusString('R')
-    unsub = {'email': email, 'token': token}
-    # @TODO Insert token with email address to db.
-    collectionT.insert_one({'email': email, 'token': token})
-    url = 'http://cgds.me:5000/notifique?token='
-    course = 'CS299'
-
-    # yigit.polat@ug.bilkent.edu.tr
-    # cagdas.oztekin@ug.bilkent.edu.tr
-    html = replaceHtmlParams(html_template, course, firstName, lastName, oldStatus, newStatus, url + token)
-    sendMail(sg, email, 'Your {0} report status changed!'.format(course), 'Greetings {0} {1},\nYour {2} report status changed from {3} to {4}'.format(firstName, lastName, course, oldStatus, newStatus), html)
-
-sys.exit()
-
 url2 = 'http://www.cs.bilkent.edu.tr/~sekreter/SummerTraining/2016G/CS299.htm'
 url3 = 'http://www.cs.bilkent.edu.tr/~sekreter/SummerTraining/2016G/CS399.htm'
 
 pages = []
-people = []
 
 while True:
     pages.append(urllib2.urlopen(url2).read())
     pages.append(urllib2.urlopen(url3).read())
-
+    people = []
     emails = []
 
     while len(pages) > 0:
@@ -148,27 +126,37 @@ while True:
                     "professor": professor, "status": status}
                 if count == 0:
                     obj['courseInt'] = 0
-                    people.append(obj)
                 else:
                     obj['courseInt'] = 1
-                    people.append(obj)
+		people.append(obj)
+
             except:
                 # print i, "Fail", tds[0].text.encode('utf-8')
                 pass
 
     for person in people:
-        old = collection.find({'firstNameLatin': person['firstNameLatin'], 'lastNameLatin': person['lastNameLatin']})
-        oldStatus = old['status']
-        newStatus = person['status']
+        oldx = collection.find({'firstNameLatin': person['firstNameLatin'], 'lastNameLatin': person['lastNameLatin'], 'courseInt': person['courseInt']})
+	print oldx.count()
+	try:
+            if oldx.count() > 1:
+    	        for i in xrange(oldx.count()):
+   		    print oldx[i]
+            old = oldx[0]
+            oldStatus = old['status']
+            newStatus = person['status']
 
-        if newStatus != oldStatus:
-            res = collectionU.find({'email': old['email']})
-            if res.count() == 0:
-                emails.append({'email': old['email'], 'course': old['courseInt'], 'oldStatus': oldStatus,
-            'newStatus': newStatus, 'firstName': person['firstName'], 'lastName': person['lastName']})
+            if newStatus != oldStatus:
+                res = collectionU.find({'email': old['email']})
+                if res.count() == 0:
+                    emails.append({'email': old['email'], 'course': old['courseInt'], 'oldStatus': oldStatus,
+                'newStatus': newStatus, 'firstName': person['firstName'], 'lastName': person['lastName']})
 
-        dbobj = collection.update({'firstNameLatin': person['firstNameLatin']}, {'$set': person})
+            dbobj = collection.update({'firstNameLatin': person['firstNameLatin']}, {'$set': person})
+	except:
+	    continue
 
+    print len(emails)
+    print 'length'
     while len(emails) > 0:
         token = getToken()
         cur = emails.pop()
@@ -186,6 +174,7 @@ while True:
         if cur['course'] == 1:
             course = 'CS399'
 
-        html = replaceHtmlParams(html_template, course, firstName, lastName, oldStatus, newStatus, url + token)
-        sendMail(sg, email, 'Your {0} report status changed!'.format(course), 'Hello {0} {1},\nYour {2} report status changed from {3} to {4}'.format(firstName, lastName, course, oldStatus, newStatus), html)
+        #html = replaceHtmlParams(html_template, course, firstName, lastName, oldStatus, newStatus, url + token)
+        #sendMail(sg, email, 'Your {0} report status changed!'.format(course), 'Hello {0} {1},\nYour {2} report status changed from {3} to {4}'.format(firstName, lastName, course, oldStatus, newStatus), html)
         print "Sent mail to {0} {1} at {2}. Status changed from {3} to {4}".format(firstName, lastName, email, cur['oldStatus'], cur['newStatus'])
+    time.sleep(100)
