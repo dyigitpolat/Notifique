@@ -105,8 +105,7 @@ while True:
     pages.append(urllib2.urlopen(url2).read())
     pages.append(urllib2.urlopen(url3).read())
     people = []
-    emails = [{'email': 'cagdas.oztekin@ug.bilkent.edu.tr', 'course': 0, 'oldStatus': 'E',
-'newStatus': 'S', 'firstName': 'Cagdas', 'lastName': 'Oztekin'}]
+    emails = []
     count = 0
 
     while len(pages) > 0:
