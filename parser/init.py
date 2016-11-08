@@ -5,6 +5,7 @@ import json
 from bs4 import BeautifulSoup
 from pymongo import MongoClient
 
+# Save people's email addresses from already hier text file.
 def saveEmails(filename, collection):
     people = []
 
@@ -23,9 +24,11 @@ def saveEmails(filename, collection):
 
             people.append(obj)
 
+    # Insert name, graduation level, and email address into DB.
     for person in people:
         dataid = collection.insert_one(person).inserted_id
 
+# Could come in handy?
 def latinizeString(s):
     s = s.replace("ö", "o")
     s = s.replace("Ö", "O")
@@ -39,15 +42,15 @@ def latinizeString(s):
     s = s.replace("ş", "s")
     s = s.replace("ğ", "g")
     s = s.replace("Ğ", "G")
-
     return s
 
 host = 'localhost'
 port = 27017
 
 client = MongoClient(host, port)
-db = client.notifique # Change the database name
+db = client.notifique
 collection = db['n20161']
+# Delete previous records. This is to initialize the DB.
 collection.delete_many({})
 saveEmails('./students.txt', collection)
 
@@ -58,19 +61,18 @@ url3 = 'http://www.cs.bilkent.edu.tr/~sekreter/SummerTraining/2016G/CS399.htm'
 pages = []
 people = []
 
+# Two respective pages to read, for CS299 and CS399
 pages.append(urllib2.urlopen(url2).read())
 pages.append(urllib2.urlopen(url3).read())
 
 for page in pages:
     soup = BeautifulSoup(page, 'html.parser')
-    # print soup
-
     trs = soup.findAll('tr')
 
-    # sys.exit()
     for i in xrange(len(trs)):
         tds = trs[i].findAll('td')
         try:
+            # Parse the data
             num = int(tds[0].text.encode('utf-8'))
             first_name = str(tds[1].text.encode('utf-8')).rstrip().replace('\n', '').replace('\r', '').replace('  ', ' ')
             last_name = str(tds[2].text.encode('utf-8')).rstrip().replace('\n', '')
@@ -87,15 +89,8 @@ for page in pages:
                 obj['courseInt'] = 1
                 people.append(obj)
         except:
-            # print i, "Fail", tds[0].text.encode('utf-8')
             pass
 
-print len(people)
 
 for person in people:
-    # print person
-    found = collection.find({'firstNameLatin': person['firstNameLatin'], 'lastNameLatin': person['lastNameLatin']})
-    print person['firstNameLatin'], person['lastNameLatin']
-
-    dbobj = collection.update({'firstNameLatin': person['firstNameLatin']}, {'$set': person})
-    # print dbobj[0]
+    collection.update({'firstNameLatin': person['firstNameLatin']}, {'$set': person})
