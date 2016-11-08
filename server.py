@@ -1,3 +1,4 @@
+import sys
 from flask import Flask
 from flask import request
 from pymongo import MongoClient
@@ -24,17 +25,15 @@ def index():
 
 @app.route("/notifique", methods=['GET'])
 def unsubscribe():
+    token = request.args.get('token')
+    tok = collectionT.find_one({'token': token})
     try:
-        token = request.args.get('token')
-        tok = collectionT.find_one({'token': token})
-        if tok.count() > 0:
-            res = tok[0]
-            collectionU.insert_one({'email': res['email']})
-            return html_template
-        else:
-            return html_mistoken
+	print tok
+        collectionU.insert_one({'email': tok['email']})
+        return html_template
     except:
-        return html_404
+        print("Unexpected error:", sys.exc_info()[0])
+        return html_mistoken
 
-if __name__ == "__main__":
-    app.run()
+if __name__ == '__main__':
+    app.run(host='0.0.0.0')
