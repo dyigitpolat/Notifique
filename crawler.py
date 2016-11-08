@@ -150,10 +150,10 @@ while True:
                 if res.count() == 0:
                     emails.append({'email': old['email'], 'course': old['courseInt'], 'oldStatus': oldStatus,
                 'newStatus': newStatus, 'firstName': person['firstName'], 'lastName': person['lastName']})
-            if cur == 0:
-                dbobj = collection299.update({'firstNameLatin': person['firstNameLatin'], 'lastNameLatin': person['lastNameLatin']}, {'$set': person})
-            else:
-                dbobj = collection399.update({'firstNameLatin': person['firstNameLatin'], 'lastNameLatin': person['lastNameLatin']}, {'$set': person})
+                if cur == 0:
+                    dbobj = collection299.update({'firstNameLatin': person['firstNameLatin'], 'lastNameLatin': person['lastNameLatin']}, {'$set': person})
+                else:
+                    dbobj = collection399.update({'firstNameLatin': person['firstNameLatin'], 'lastNameLatin': person['lastNameLatin']}, {'$set': person})
         except:
             continue
 
@@ -174,7 +174,7 @@ while True:
         if cur['course'] == 1:
             course = 'CS399'
 
-        #html = replaceHtmlParams(html_template, course, firstName, lastName, oldStatus, newStatus, url + token)
-        #sendMail(sg, email, 'Your {0} report status changed!'.format(course), 'Hello {0} {1},\nYour {2} report status changed from {3} to {4}'.format(firstName, lastName, course, oldStatus, newStatus), html)
+        html = replaceHtmlParams(html_template, course, firstName, lastName, oldStatus, newStatus, url + token)
+        sendMail(sg, email, 'Your {0} report status changed!'.format(course), 'Hello {0} {1},\nYour {2} report status changed from {3} to {4}'.format(firstName, lastName, course, oldStatus, newStatus), html)
         print "Sent mail to {0} {1} at {2}. Status changed from {3} to {4}".format(firstName, lastName, email, cur['oldStatus'], cur['newStatus'])
-    # time.sleep(100)
+    time.sleep(100)
