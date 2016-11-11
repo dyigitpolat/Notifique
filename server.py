@@ -1,4 +1,5 @@
 import sys
+from flask import render_template
 from flask import Flask
 from flask import request
 from pymongo import MongoClient
@@ -34,6 +35,10 @@ def unsubscribe():
     except:
         print("Unexpected error:", sys.exc_info()[0])
         return html_mistoken
+
+@app.errorhandler(404)
+def page_not_found(e):
+    return html_404
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0')

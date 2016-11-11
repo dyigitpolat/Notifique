@@ -102,8 +102,20 @@ url3 = 'http://www.cs.bilkent.edu.tr/~sekreter/SummerTraining/2016G/CS399.htm'
 pages = []
 
 while True:
-    pages.append(urllib2.urlopen(url2).read())
-    pages.append(urllib2.urlopen(url3).read())
+    try:
+        request = urllib2.Request(url3)
+        request.add_header('User-agent', 'Mozilla/5.0 (Linux i686)')
+        pages.append(urllib2.urlopen(request))
+        request = urllib2.Request(url2)
+        request.add_header('User-agent', 'Mozilla/5.0 (Linux i686)')
+        pages.append(urllib2.urlopen(request))
+	print "Read pages."
+    except:
+        print 'Timeout'
+	print sys.exc_info()[0]
+        time.sleep(100)
+        continue
+
     people = []
     emails = []
     count = 0
@@ -111,6 +123,7 @@ while True:
     while len(pages) > 0:
         page = pages.pop()
         soup = BeautifulSoup(page, 'html.parser')
+	count = 1 - len(pages)
 
         trs = soup.findAll('tr')
 
@@ -128,24 +141,25 @@ while True:
                 obj['courseInt'] = count
                 people.append(obj)
             except:
-                pass
-        count += 1
+#		print 'Hola'
+ #               print sys.exc_info()[0]
+		pass
 
     for person in people:
         cur = person['courseInt']
-        oldx = {}
+        oldx = []
         if cur == 0:
-            oldx = collection299.find_one({'firstNameLatin': person['firstNameLatin'], 'lastNameLatin': person['lastNameLatin'], 'courseInt': person['courseInt']})
+            oldx = collection299.find_one({'firstNameLatin': person['firstNameLatin'], 'lastNameLatin': person['lastNameLatin']})
         else:
-            oldx = collection399.find_one({'firstNameLatin': person['firstNameLatin'], 'lastNameLatin': person['lastNameLatin'], 'courseInt': person['courseInt']})
-
+            oldx = collection399.find_one({'firstNameLatin': person['firstNameLatin'], 'lastNameLatin': person['lastNameLatin']})
         try:
-            old = oldx[0]
+            old = oldx
             oldStatus = old['status']
             newStatus = person['status']
-
             if newStatus != oldStatus and old['courseInt'] == person['courseInt']:
+		print old, person
                 res = collectionU.find({'email': old['email']})
+		print res.count()
                 if res.count() == 0:
                     emails.append({'email': old['email'], 'course': old['courseInt'], 'oldStatus': oldStatus,
                 'newStatus': newStatus, 'firstName': person['firstName'], 'lastName': person['lastName']})
@@ -154,6 +168,8 @@ while True:
                 else:
                     dbobj = collection399.update({'firstNameLatin': person['firstNameLatin'], 'lastNameLatin': person['lastNameLatin']}, {'$set': person})
         except:
+#	    print 'Mundo'
+#	    print sys.exc_info()[0]	
             continue
 
     while len(emails) > 0:
@@ -174,6 +190,6 @@ while True:
             course = 'CS399'
 
         html = replaceHtmlParams(html_template, course, firstName, lastName, oldStatus, newStatus, url + token)
-        sendMail(sg, email, 'Your {0} report status changed!'.format(course), 'Hello {0} {1},\nYour {2} report status changed from {3} to {4}'.format(firstName, lastName, course, oldStatus, newStatus), html)
+#        sendMail(sg, email, 'Your {0} report status changed!'.format(course), 'Hello {0} {1},\nYour {2} report status changed from {3} to {4}'.format(firstName, lastName, course, oldStatus, newStatus), html)
         print "Sent mail to {0} {1} at {2}. Status changed from {3} to {4}".format(firstName, lastName, email, cur['oldStatus'], cur['newStatus'])
     time.sleep(100)
